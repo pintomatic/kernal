@@ -90,11 +90,11 @@ export function registerTools(server: McpServer, db: DbAdapter): void {
 
   server.tool(
     'kernal_correct',
-    'Fix errors in the knowledge base — update fields, delete entities, or merge duplicates.',
+    'Fix errors in the knowledge base — update fields, delete entities, merge duplicates, or reset the entire database.',
     {
-      action: z.enum(['update', 'delete', 'merge']).describe('The correction action to perform'),
-      entity_type: z.enum(['people', 'organizations', 'activities', 'topics', 'actions', 'notes']).describe('The type of entity to correct'),
-      id: z.number().describe('The ID of the entity to correct'),
+      action: z.enum(['update', 'delete', 'merge', 'reset']).describe('The correction action: update, delete, merge, or reset (wipes all data)'),
+      entity_type: z.enum(['people', 'organizations', 'activities', 'topics', 'actions', 'notes']).optional().describe('The type of entity to correct (not needed for reset)'),
+      id: z.number().optional().describe('The ID of the entity to correct (not needed for reset)'),
       updates: z.record(z.unknown()).optional().describe('For update action: fields to update as key-value pairs'),
       merge_into_id: z.number().optional().describe('For merge action: the ID to merge into (source is deleted, target is kept)'),
     },

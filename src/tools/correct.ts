@@ -6,18 +6,27 @@ type EntityTable = 'people' | 'organizations' | 'activities' | 'topics' | 'actio
 const VALID_TABLES = new Set<EntityTable>(['people', 'organizations', 'activities', 'topics', 'actions', 'notes']);
 
 export function handleCorrect(db: DbAdapter, args: {
-  action: 'update' | 'delete' | 'merge';
-  entity_type: string;
-  id: number;
+  action: 'update' | 'delete' | 'merge' | 'reset';
+  entity_type?: string;
+  id?: number;
   updates?: Record<string, unknown>;
   merge_into_id?: number;
 }) {
   const { action, entity_type, id } = args;
-  const table = entity_type as EntityTable;
 
-  if (!VALID_TABLES.has(table)) {
-    return textResult({ error: `Invalid entity type: "${entity_type}". Valid types: ${[...VALID_TABLES].join(', ')}` });
+  // Reset wipes the entire database — entity_type and id are ignored
+  if (action === 'reset') {
+    return handleReset(db);
   }
+
+  if (!entity_type || !VALID_TABLES.has(entity_type as EntityTable)) {
+    return textResult({ error: `Invalid or missing entity type: "${entity_type}". Valid types: ${[...VALID_TABLES].join(', ')}` });
+  }
+  if (id == null) {
+    return textResult({ error: 'id is required for update, delete, and merge actions.' });
+  }
+
+  const table = entity_type as EntityTable;
 
   switch (action) {
     case 'update':
@@ -30,7 +39,7 @@ export function handleCorrect(db: DbAdapter, args: {
       }
       return handleMerge(db, table, id, args.merge_into_id);
     default:
-      return textResult({ error: `Invalid action: "${action}". Valid actions: update, delete, merge` });
+      return textResult({ error: `Invalid action: "${action}". Valid actions: update, delete, merge, reset` });
   }
 }
 
@@ -91,6 +100,15 @@ function handleDelete(db: DbAdapter, table: EntityTable, id: number) {
     'DELETE FROM relationships WHERE (source_type = ? AND source_id = ?) OR (target_type = ? AND target_id = ?)',
     [entityType, id, entityType, id],
   ).changes;
+
+  // Nullify foreign key references before deleting
+  if (table === 'people') {
+    db.run('UPDATE actions SET owner_id = NULL WHERE owner_id = ?', [id]);
+    db.run('UPDATE people SET org_id = NULL WHERE org_id = ?', [id]); // in case someone references another person as org (shouldn't happen, but safe)
+  }
+  if (table === 'organizations') {
+    db.run('UPDATE people SET org_id = NULL WHERE org_id = ?', [id]);
+  }
 
   db.run(`DELETE FROM ${table} WHERE id = ?`, [id]);
 
@@ -156,6 +174,31 @@ function handleMerge(db: DbAdapter, table: EntityTable, sourceId: number, target
     success: true,
     message: `Merged ${table} #${sourceId} into #${targetId}. Source deleted.`,
     entity: merged,
+  });
+}
+
+function handleReset(db: DbAdapter) {
+  const tables = ['relationships', 'actions', 'notes', 'topics', 'activities', 'people', 'organizations'];
+  const counts: Record<string, number> = {};
+
+  for (const table of tables) {
+    const count = (db.get<{ c: number }>(`SELECT COUNT(*) as c FROM ${table}`) || { c: 0 }).c;
+    counts[table] = count;
+    db.run(`DELETE FROM ${table}`);
+  }
+
+  // Reset FTS indexes
+  try {
+    db.run("INSERT INTO people_fts(people_fts) VALUES('rebuild')");
+    db.run("INSERT INTO notes_fts(notes_fts) VALUES('rebuild')");
+  } catch {
+    // FTS tables might not exist yet
+  }
+
+  return textResult({
+    success: true,
+    message: 'Database reset. All entities and relationships deleted.',
+    deleted: counts,
   });
 }
 
