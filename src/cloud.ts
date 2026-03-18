@@ -144,6 +144,129 @@ async function main() {
     res.json({ status: 'ok', counts });
   });
 
+  // ── Dashboard API ──
+
+  app.get('/api/dashboard/graph', authMiddleware, (_req, res) => {
+    const people = db.all<any>(`SELECT p.id, p.name, p.role, o.name as org_name
+      FROM people p LEFT JOIN organizations o ON p.org_id = o.id`);
+    const orgs = db.all<any>('SELECT id, name, industry, type FROM organizations');
+
+    const nodes: any[] = [];
+    for (const p of people) {
+      nodes.push({ id: `person-${p.id}`, label: p.name, type: 'person', role: p.role, org: p.org_name });
+    }
+    for (const o of orgs) {
+      nodes.push({ id: `org-${o.id}`, label: o.name, type: 'organization', industry: o.industry, orgType: o.type });
+    }
+
+    const rels = db.all<any>('SELECT * FROM relationships');
+    const edges: any[] = [];
+    for (const r of rels) {
+      const sourceId = `${r.source_type === 'person' ? 'person' : r.source_type === 'organization' ? 'org' : r.source_type}-${r.source_id}`;
+      const targetId = `${r.target_type === 'person' ? 'person' : r.target_type === 'organization' ? 'org' : r.target_type}-${r.target_id}`;
+      // Only include person↔person and person↔org edges for the graph
+      if ((r.source_type === 'person' || r.source_type === 'organization') &&
+          (r.target_type === 'person' || r.target_type === 'organization')) {
+        edges.push({ source: sourceId, target: targetId, relation: r.relation });
+      }
+    }
+    res.json({ nodes, edges });
+  });
+
+  app.get('/api/dashboard/timeline', authMiddleware, (req, res) => {
+    const entity = req.query.entity as string | undefined;
+    const days = parseInt(req.query.days as string) || 90;
+
+    let activities: any[];
+    if (entity) {
+      activities = db.all(
+        `SELECT DISTINCT a.* FROM activities a
+         LEFT JOIN relationships r ON r.target_id = a.id AND r.target_type = 'activity'
+         LEFT JOIN people p ON r.source_id = p.id AND r.source_type = 'person'
+         LEFT JOIN organizations o ON r.source_id = o.id AND r.source_type = 'organization'
+         WHERE (p.name LIKE ? OR o.name LIKE ?)
+         ORDER BY a.date DESC, a.created_at DESC LIMIT 50`,
+        [`%${entity}%`, `%${entity}%`],
+      );
+    } else {
+      activities = db.all(
+        `SELECT * FROM activities ORDER BY date DESC, created_at DESC LIMIT 50`,
+      );
+    }
+
+    const enriched = activities.map((act: any) => {
+      const participants = db.all<any>(
+        `SELECT p.name, p.role FROM people p
+         JOIN relationships r ON r.source_id = p.id AND r.source_type = 'person'
+         WHERE r.target_type = 'activity' AND r.target_id = ?`,
+        [act.id],
+      );
+      const orgs = db.all<any>(
+        `SELECT o.name FROM organizations o
+         JOIN relationships r ON r.source_id = o.id AND r.source_type = 'organization'
+         WHERE r.target_type = 'activity' AND r.target_id = ?`,
+        [act.id],
+      );
+      return { ...act, participants, organizations: orgs.map((o: any) => o.name) };
+    });
+
+    res.json({ activities: enriched, count: enriched.length });
+  });
+
+  app.get('/api/dashboard/actions', authMiddleware, (req, res) => {
+    const status = (req.query.status as string) || 'open';
+    const where = status === 'all' ? '' : 'WHERE a.status = ?';
+    const params = status === 'all' ? [] : [status];
+
+    const actions = db.all<any>(
+      `SELECT a.*, p.name as owner_name FROM actions a
+       LEFT JOIN people p ON a.owner_id = p.id
+       ${where}
+       ORDER BY
+         CASE WHEN a.due_date IS NOT NULL THEN 0 ELSE 1 END,
+         a.due_date ASC, a.created_at DESC
+       LIMIT 100`,
+      params,
+    );
+
+    // Group by urgency
+    const now = new Date().toISOString().slice(0, 10);
+    const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const grouped = {
+      overdue: actions.filter((a: any) => a.due_date && a.due_date < now),
+      this_week: actions.filter((a: any) => a.due_date && a.due_date >= now && a.due_date <= weekFromNow),
+      upcoming: actions.filter((a: any) => a.due_date && a.due_date > weekFromNow),
+      no_date: actions.filter((a: any) => !a.due_date),
+    };
+
+    res.json({ actions, grouped, count: actions.length });
+  });
+
+  app.get('/api/dashboard/stats', authMiddleware, (_req, res) => {
+    const counts = {
+      people: (db.get<{ c: number }>('SELECT COUNT(*) as c FROM people') || { c: 0 }).c,
+      organizations: (db.get<{ c: number }>('SELECT COUNT(*) as c FROM organizations') || { c: 0 }).c,
+      activities: (db.get<{ c: number }>('SELECT COUNT(*) as c FROM activities') || { c: 0 }).c,
+      topics: (db.get<{ c: number }>('SELECT COUNT(*) as c FROM topics') || { c: 0 }).c,
+      actions_open: (db.get<{ c: number }>("SELECT COUNT(*) as c FROM actions WHERE status = 'open'") || { c: 0 }).c,
+      relationships: (db.get<{ c: number }>('SELECT COUNT(*) as c FROM relationships') || { c: 0 }).c,
+    };
+
+    const topConnected = db.all<any>(
+      `SELECT p.name, p.role, o.name as org_name, COUNT(r.id) as connections
+       FROM people p
+       LEFT JOIN organizations o ON p.org_id = o.id
+       JOIN relationships r ON (r.source_type = 'person' AND r.source_id = p.id) OR (r.target_type = 'person' AND r.target_id = p.id)
+       GROUP BY p.id ORDER BY connections DESC LIMIT 5`,
+    );
+
+    const recentActivity = db.all<any>(
+      `SELECT type, COUNT(*) as count FROM activities GROUP BY type ORDER BY count DESC`,
+    );
+
+    res.json({ counts, topConnected, activityBreakdown: recentActivity });
+  });
+
   app.get('/api/export', authMiddleware, (_req, res) => {
     const dbPath = process.env.KERNAL_DB_PATH;
     if (!dbPath) {
