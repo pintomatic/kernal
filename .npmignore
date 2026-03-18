@@ -1,0 +1,12 @@
+test/
+scripts/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.local
+.git/
+.github/
+Dockerfile
+vitest.config.ts

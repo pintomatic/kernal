@@ -1,0 +1,66 @@
+{
+  "name": "@kernal/mcp",
+  "version": "0.1.0",
+  "description": "Structured second brain — auto-extracts entities and relationships from natural conversation via MCP",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "bin": {
+    "kernal": "dist/bin/kernal.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/src/index.js",
+    "cloud": "node dist/src/cloud.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "knowledge-graph",
+    "second-brain",
+    "sqlite",
+    "cli",
+    "entity-extraction",
+    "relationship-graph",
+    "claude",
+    "model-context-protocol"
+  ],
+  "author": "Cesar Pinto <cesar.a.pinto@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pintomatic/kernal.git"
+  },
+  "homepage": "https://github.com/pintomatic/kernal#readme",
+  "bugs": {
+    "url": "https://github.com/pintomatic/kernal/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist/",
+    "src/db/schema.sql",
+    "bin/",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
