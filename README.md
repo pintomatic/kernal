@@ -72,32 +72,12 @@ From a single paragraph like *"Had coffee with Maria Olsen from Cognite. She's t
 - **Activity**: Coffee meeting, today's date, with Maria
 - **Relationships**: Maria → works_at → Cognite, Maria → participated_in → Activity, topic → discussed_in → Activity
 
-## Three Tiers
+## Architecture
 
-### Local (Free, Open Source)
-- SQLite on your machine (`~/.kernal/kernal.db`)
-- MCP server via stdio transport
-- Works with Claude Desktop, Claude Code, or any MCP client
-- Your data never leaves your machine
-
-### Cloud ($15-25/month)
-- Same MCP server over HTTP with API key auth
-- Access from any device
-- `docker run` or deploy to any cloud provider
-
-```bash
-# Run cloud server locally
-KERNAL_API_KEY=your-secret KERNAL_DB_PATH=~/.kernal/kernal.db npx @kernal/mcp cloud
-
-# Or with Docker
-docker build -t kernal .
-docker run -p 8080:8080 -e KERNAL_API_KEY=your-secret -v kernal-data:/data kernal
-```
-
-### Dashboard (Coming Soon)
-Claude generates interactive React components on-the-fly:
-- *"Show me my network"* → relationship graph
-- *"Visualize my Equinor history"* → timeline component
+- **Local-first**: SQLite on your machine (`~/.kernal/kernal.db`) — your data never leaves your machine
+- **MCP server**: Stdio transport, works with Claude Desktop, Claude Code, or any MCP client
+- **Cloud mode**: Same server over HTTP with API key auth for multi-device access
+- **Dashboard**: Interactive visualizations — network graph, timeline, action items
 
 ## CLI Commands
 
