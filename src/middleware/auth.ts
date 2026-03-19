@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
 export interface AuthenticatedRequest extends Request {
@@ -5,13 +6,6 @@ export interface AuthenticatedRequest extends Request {
   dbUrl?: string;
 }
 
-/**
- * Simple API key authentication middleware.
- * Validates the x-api-key header against environment-configured keys.
- *
- * For v1, we support a single API key via KERNAL_API_KEY env var.
- * Multi-tenant (per-user Turso DBs) can be added later.
- */
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const apiKey = req.headers['x-api-key'] as string | undefined;
 
@@ -32,7 +26,10 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  if (apiKey !== validKey) {
+  // Constant-time comparison to prevent timing attacks
+  const a = Buffer.from(apiKey);
+  const b = Buffer.from(validKey);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     res.status(401).json({
       error: 'Invalid API key',
       hint: 'Check your API key and try again',

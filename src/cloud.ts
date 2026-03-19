@@ -46,8 +46,51 @@ async function main() {
   const db = initDatabase();
   const app = express();
 
-  app.use(cors());
+  // CORS — restrict to configured origin, default to localhost for dev
+  const corsOrigin = process.env.KERNAL_CORS_ORIGIN || 'http://localhost:5174';
+  app.use(cors({
+    origin: corsOrigin === '*' ? true : corsOrigin.split(','),
+    credentials: true,
+  }));
   app.use(express.json());
+
+  // ── Rate Limiting (in-memory, per IP) ──
+  const rateLimitWindow = 60_000; // 1 minute
+  const rateLimitMax = parseInt(process.env.KERNAL_RATE_LIMIT || '120'); // requests per window
+  const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+  app.use((req, res, next) => {
+    // Skip rate limiting for health checks
+    if (req.path === '/health') return next();
+
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    let bucket = rateBuckets.get(ip);
+
+    if (!bucket || now > bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + rateLimitWindow };
+      rateBuckets.set(ip, bucket);
+    }
+
+    bucket.count++;
+    res.setHeader('X-RateLimit-Limit', rateLimitMax);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, rateLimitMax - bucket.count));
+
+    if (bucket.count > rateLimitMax) {
+      res.status(429).json({ error: 'Too many requests', hint: 'Slow down. Try again in a minute.' });
+      return;
+    }
+
+    next();
+  });
+
+  // Clean up stale rate limit buckets every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, bucket] of rateBuckets) {
+      if (now > bucket.resetAt) rateBuckets.delete(ip);
+    }
+  }, 300_000);
 
   // Health check (no auth)
   app.get('/health', (_req, res) => {
@@ -60,8 +103,23 @@ async function main() {
   });
 
   // ── MCP Endpoint ──
-  // Track active transports by session ID
+  // Track active transports by session ID + last activity time
   const transports = new Map<string, StreamableHTTPServerTransport>();
+  const sessionLastActive = new Map<string, number>();
+  const SESSION_TIMEOUT = 30 * 60_000; // 30 minutes
+
+  // Evict idle sessions every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, lastActive] of sessionLastActive) {
+      if (now - lastActive > SESSION_TIMEOUT) {
+        const transport = transports.get(id);
+        if (transport) transport.close();
+        transports.delete(id);
+        sessionLastActive.delete(id);
+      }
+    }
+  }, 300_000);
 
   // POST /mcp — main MCP endpoint (initialize + tool calls)
   app.post('/mcp', authMiddleware, async (req, res) => {
@@ -71,6 +129,7 @@ async function main() {
 
       if (sessionId && transports.has(sessionId)) {
         // Existing session — route to existing transport
+        sessionLastActive.set(sessionId, Date.now());
         const transport = transports.get(sessionId)!;
         await transport.handleRequest(req, res, req.body);
         return;
@@ -81,9 +140,11 @@ async function main() {
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
           transports.set(id, transport);
+          sessionLastActive.set(id, Date.now());
         },
         onsessionclosed: (id) => {
           transports.delete(id);
+          sessionLastActive.delete(id);
         },
       });
 
