@@ -54,13 +54,13 @@ Add to your `claude_desktop_config.json`:
 
 Restart Claude Desktop. Then talk naturally:
 
-> "I had lunch with Erik Haugen from Equinor today. He's their VP of Digital. We discussed their cloud migration — targeting Q3."
+> "I had lunch with Jonas Lindberg from Nordvik Energy today. He's their VP of Digital. We discussed their cloud migration — targeting Q3."
 
-Kernal extracts Erik, Equinor, the cloud migration topic, and creates relationships between them. Ask Claude:
+Kernal extracts Jonas, Nordvik Energy, the cloud migration topic, and creates relationships between them. Ask Claude:
 
-- *"What do I know about Equinor?"* → Full briefing with people, interactions, topics
+- *"What do I know about Nordvik Energy?"* → Full briefing with people, interactions, topics
 - *"Who should I follow up with?"* → Open action items with owners and due dates
-- *"Show me everyone at Equinor"* → Contact list filtered by organization
+- *"Show me everyone at Nordvik Energy"* → Contact list filtered by organization
 
 ## How It Works
 
@@ -90,14 +90,14 @@ No LLM calls from the server. No API keys needed. Zero cost extraction.
 
 ## What Gets Extracted
 
-From a single paragraph like *"Had coffee with Maria Olsen from Cognite. She's their VP of Sales. We discussed their expansion into APAC. I need to send her the partner proposal by Friday."*:
+From a single paragraph like *"Had coffee with Sofia Andersen from Arctura Tech. She's their VP of Sales. We discussed their expansion into APAC. I need to send her the partner proposal by Friday."*:
 
-- **People**: Maria Olsen (VP of Sales, at Cognite) — `new` or `existing`
-- **Organizations**: Cognite — linked to Maria
+- **People**: Sofia Andersen (VP of Sales, at Arctura Tech) — `new` or `existing`
+- **Organizations**: Arctura Tech — linked to Sofia
 - **Topics**: expansion into APAC
-- **Actions**: "send her the partner proposal" — due Friday, assigned to Maria
-- **Activity**: Coffee meeting, today's date, with Maria
-- **Relationships**: Maria → works_at → Cognite, Maria → participated_in → Activity, topic → discussed_in → Activity
+- **Actions**: "send her the partner proposal" — due Friday, assigned to Sofia
+- **Activity**: Coffee meeting, today's date, with Sofia
+- **Relationships**: Sofia → works_at → Arctura Tech, Sofia → participated_in → Activity, topic → discussed_in → Activity
 
 ## CLI Commands
 
@@ -122,9 +122,9 @@ Actions ←→ Notes
 ```
 
 All entities can link to any other entity via the `relationships` table, enabling queries like:
-- "Who has Maria met with?" (person → activities → other people)
-- "What topics come up with Equinor?" (org → people → activities → topics)
-- "What's the connection between Erik and Cognite?" (path through graph)
+- "Who has Sofia met with?" (person → activities → other people)
+- "What topics come up with Nordvik Energy?" (org → people → activities → topics)
+- "What's the connection between Jonas and Arctura Tech?" (path through graph)
 
 ## Development
 

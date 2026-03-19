@@ -22,7 +22,7 @@ interface ExtractionResult {
 const PERSON_PATTERNS = [
   // "I met/saw/spoke with John Smith" (handles sentence-start capitalization)
   /(?:[Mm]et|[Ss]aw|[Ss]poke (?:with|to)|[Tt]alked (?:with|to)|[Cc]hatted with|[Cc]aught up with|[Rr]an into|[Bb]umped into|[Hh]ad (?:lunch|dinner|coffee|drinks|a call|a meeting|a chat|a conversation|breakfast) with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/g,
-  // "John Smith from/at Equinor" — terminator list expanded
+  // "John Smith from/at Acme Corp" — terminator list expanded
   /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\s+(?:from|at|of|with)\s+([A-Z][a-zA-Z&.\s]+?)(?:\.|,|;|\s+(?:who|and|is|was|today|yesterday|this|last|about|mentioned|said|told|asked|suggested|recommended|called|emailed|will|should|needs?))/g,
   // "colleague/associate Name"
   /(?:[Hh](?:is|er)|[Tt]heir|[Mm]y|[Oo]ur)\s+(?:colleague|coworker|co-worker|associate|partner|boss|manager|director|assistant|counterpart)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/g,
@@ -49,9 +49,9 @@ function extractRoleForPerson(text: string, personName: string): string | null {
   const escaped = firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   const rolePatterns = [
-    // "Erik is their VP of Digital" / "Erik, VP of Digital"
+    // "John is their VP of Digital" / "John, VP of Digital"
     new RegExp(`${escaped}[^.]*?(?:is|as|,)\\s+(?:the\\s+|their\\s+|an?\\s+)?((?:VP|CEO|CTO|CFO|COO|CMO|CIO|CISO|CHRO|CPO|CDO|CRO|SVP|EVP|MD|Managing Director|Director|Head|Manager|Partner|Senior Partner|Junior Partner|Principal|Lead|Senior|Chief|Founder|Co-founder|Board (?:Member|Chair)|Chairman|Chairwoman|President|General Manager|Country Manager|Regional Manager|Associate|Analyst|Consultant|Senior Consultant|Advisor|Senior Advisor)(?:\\s+(?:of|for|in|&|and)\\s+[A-Za-z\\s&]+?)?)(?:\\.|,|;|\\s+(?:at|of|from|and|who|\\.|$))`, 'i'),
-    // "VP of Digital Erik" (role before name)
+    // "VP of Digital John" (role before name)
     new RegExp(`((?:VP|CEO|CTO|CFO|COO|CMO|CIO|CISO|CHRO|CPO|CDO|CRO|SVP|EVP|MD|Managing Director|Director|Head|Manager|Partner|Senior Partner|Principal|Lead|Senior|Chief|Founder|Co-founder|President)(?:\\s+(?:of|for|in|&|and)\\s+[A-Za-z\\s&]+?)?)\\s+${escaped}`, 'i'),
     // "He/She is the VP of..." (pronoun reference — only works if text mentions one person)
     new RegExp(`(?:He|She|They)(?:'s|\\s+is|\\s+are|\\s+serves as)\\s+(?:the\\s+|their\\s+|an?\\s+)?((?:VP|CEO|CTO|CFO|COO|CMO|CIO|CISO|CHRO|CPO|CDO|CRO|SVP|EVP|Director|Head|Manager|Partner|Principal|Lead|Senior|Chief|Founder|Co-founder|President|Board Member|Board Chair|Chairman|Chairwoman|Managing Director|Country Manager|General Manager|Consultant|Senior Consultant|Advisor|Senior Advisor|Associate|Analyst)(?:\\s+(?:of|for|in|&|and)\\s+[A-Za-z\\s&]+?)?)(?:\\.|,|;|$)`, 'i'),
@@ -72,13 +72,13 @@ function extractRoleForPerson(text: string, personName: string): string | null {
 // ── Organization patterns ──
 
 const ORG_PATTERNS = [
-  // "from/at/of/with Equinor" — expanded terminators
+  // "from/at/of/with Acme Corp" — expanded terminators
   /(?:from|at|of|with|for|joined|left|works? (?:at|for))\s+([A-Z][a-zA-Z&.\s]+?)(?:\.|,|;|\s+(?:who|and|today|yesterday|this|last|about|regarding|we|they|he|she|it|I|where|which|that|as|to|is|are|was|were|has|had))/g,
-  // "Equinor's X" — possessive
+  // "Acme Corp's X" — possessive
   /([A-Z][a-zA-Z&.]+)(?:'s\s+)/g,
-  // "the team at Equinor" / "people at Equinor"
+  // "the team at Acme Corp" / "people at Acme Corp"
   /(?:team|people|group|department|division|office)\s+(?:at|in|from)\s+([A-Z][a-zA-Z&.\s]+?)(?:\.|,|;|\s)/g,
-  // "Board of Cognite"
+  // "Board of Acme Corp"
   /[Bb]oard\s+of\s+([A-Z][a-zA-Z&.\s]+?)(?:\s+(?:needs?|is|has|had|wants?|will|should|must|meets?)|\.)/g,
 ];
 
@@ -276,7 +276,7 @@ function isValidPersonName(name: string): boolean {
   if (parts.length === 2 && TITLE_WORDS.has(parts[0].toLowerCase()) && TITLE_WORDS.has(parts[1].toLowerCase())) return false;
   // Filter out if first word is a verb/action word that got capitalized (sentence start)
   if (TITLE_WORDS.has(parts[0].toLowerCase())) return false;
-  // Filter out org-like names (e.g., "Equinor Head", "Cognite Solutions")
+  // Filter out org-like names (e.g., "Acme Corp Head", "Acme Corp Solutions")
   if (ORG_SUFFIXES.has(parts[parts.length - 1].toLowerCase())) return false;
   return true;
 }
