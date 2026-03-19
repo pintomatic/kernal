@@ -4,6 +4,33 @@ Structured second brain that auto-extracts entities and relationships from natur
 
 Talk to Claude naturally about your meetings, calls, and interactions. Kernal extracts people, organizations, topics, and relationships — building a knowledge graph you own.
 
+## What's Included (Open Source)
+
+Everything you need to run Kernal locally on your own machine:
+
+- **8 MCP tools** — remember, recall, people, orgs, activities, actions, context, correct
+- **SQLite database** — local-first, your data never leaves your machine
+- **Entity extraction** — regex heuristics extract people, orgs, topics, actions, and dates from natural text
+- **Entity resolution** — fuzzy matching + Levenshtein distance prevents duplicates
+- **CLI** — `init`, `serve`, `status`, `export`
+- **50 tests** — comprehensive test suite
+
+This is a fully functional knowledge graph you can run yourself, for free, forever.
+
+## What Andes Provides (Managed Service)
+
+For teams and professionals who want more, [Andes](https://andes.no) offers:
+
+- **Cloud hosting** — access your knowledge graph from any device, API key auth, no self-hosting
+- **Dashboard** — interactive visualizations (network graph, timeline, action items) powered by your data
+- **Multi-user** — team features, shared knowledge bases, role-based access
+- **Onboarding & support** — we set it up for you and help your team get value from day one
+- **Industry workflows** — pre-built patterns for executive search, consulting, professional services
+
+The open-source core is the engine. Andes wraps it with infrastructure, UX, and support.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -59,7 +86,7 @@ No LLM calls from the server. No API keys needed. Zero cost extraction.
 | `kernal_activities` | Recent interactions — filter by type, person, date |
 | `kernal_actions` | Open follow-ups and tasks — filter by status, owner, due date |
 | `kernal_context` | Full briefing on a person or org — timeline, network, topics |
-| `kernal_correct` | Update fields, merge duplicates, delete errors |
+| `kernal_correct` | Update fields, merge duplicates, delete errors, or reset |
 
 ## What Gets Extracted
 
@@ -71,13 +98,6 @@ From a single paragraph like *"Had coffee with Maria Olsen from Cognite. She's t
 - **Actions**: "send her the partner proposal" — due Friday, assigned to Maria
 - **Activity**: Coffee meeting, today's date, with Maria
 - **Relationships**: Maria → works_at → Cognite, Maria → participated_in → Activity, topic → discussed_in → Activity
-
-## Architecture
-
-- **Local-first**: SQLite on your machine (`~/.kernal/kernal.db`) — your data never leaves your machine
-- **MCP server**: Stdio transport, works with Claude Desktop, Claude Code, or any MCP client
-- **Cloud mode**: Same server over HTTP with API key auth for multi-device access
-- **Dashboard**: Interactive visualizations — network graph, timeline, action items
 
 ## CLI Commands
 
@@ -115,6 +135,16 @@ npm install
 npm run build
 npm test        # 50 tests
 ```
+
+### Self-Hosting the Cloud Server
+
+The repo includes an Express.js cloud server if you want to self-host for multi-device access:
+
+```bash
+KERNAL_API_KEY=your-secret KERNAL_DB_PATH=~/.kernal/kernal.db npm run cloud
+```
+
+A Dockerfile is also included. This is the same server that powers the Andes managed service.
 
 ### Seed Demo Data
 
