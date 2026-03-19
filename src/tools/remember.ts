@@ -1,76 +1,48 @@
 import type { DbAdapter } from '../db/adapter.js';
-import { extractAndStore } from '../extraction/prompt.js';
 import { textResult } from '../utils/format.js';
 
 export function handleRemember(db: DbAdapter, args: { text: string }) {
   const { text } = args;
   if (!text || text.trim().length === 0) {
-    return textResult({ error: 'No text provided. Please provide text to extract entities from.' });
+    return textResult({ error: 'No text provided.' });
   }
 
-  const result = extractAndStore(db, text);
+  // Store raw text as a note
+  const noteResult = db.run('INSERT INTO notes (content) VALUES (?)', [text]);
 
-  const summary: string[] = [];
-  summary.push('## Extraction Summary\n');
+  // Return existing entities so Claude can check for duplicates
+  const existingPeople = db.all<{ id: number; name: string; role: string | null; org_name: string | null }>(
+    `SELECT p.id, p.name, p.role, o.name as org_name FROM people p
+     LEFT JOIN organizations o ON p.org_id = o.id
+     ORDER BY p.updated_at DESC LIMIT 50`,
+  );
+  const existingOrgs = db.all<{ id: number; name: string }>(
+    'SELECT id, name FROM organizations ORDER BY updated_at DESC LIMIT 50',
+  );
 
-  if (result.people.length > 0) {
-    summary.push('**People:**');
-    for (const p of result.people) {
-      const parts: string[] = [];
-      if (p.role) parts.push(p.role);
-      if (p.org) parts.push(`at ${p.org}`);
-      const details = parts.length > 0 ? ` — ${parts.join(', ')}` : '';
-      const badge = p.status === 'matched' ? '`existing`' : '`new`';
-      summary.push(`- ${p.name}${details} ${badge}`);
-    }
-    summary.push('');
-  }
+  const instructions = `## Stored as note #${noteResult.lastInsertRowid}
 
-  if (result.organizations.length > 0) {
-    summary.push('**Organizations:**');
-    for (const o of result.organizations) {
-      const badge = o.status === 'matched' ? '`existing`' : '`new`';
-      summary.push(`- ${o.name} ${badge}`);
-    }
-    summary.push('');
-  }
+Now extract entities from the text above and store them using these tools:
 
-  if (result.topics.length > 0) {
-    summary.push('**Topics:**');
-    for (const t of result.topics) {
-      const badge = t.status === 'matched' ? '`existing`' : '`new`';
-      summary.push(`- ${t.name} ${badge}`);
-    }
-    summary.push('');
-  }
+1. **People** — For each person mentioned, call \`kernal_add_person\` with their name, role, and organization. Check the existing people list below to avoid duplicates — if someone already exists, skip them or use \`kernal_correct\` to update their info.
 
-  if (result.actions.length > 0) {
-    summary.push('**Action items:**');
-    for (const a of result.actions) {
-      const owner = a.owner ? ` (→ ${a.owner})` : '';
-      const due = a.due_date ? ` [due: ${a.due_date}]` : '';
-      summary.push(`- ${a.title}${owner}${due}`);
-    }
-    summary.push('');
-  }
+2. **Organizations** — For each company/org mentioned, call \`kernal_add_org\` with name, industry, and type. Check existing orgs below.
 
-  if (result.activity) {
-    summary.push(`**Activity logged:** ${result.activity.title} _(${result.activity.type})_`);
-    if (result.activity.date) summary.push(`**Date:** ${result.activity.date}`);
-    summary.push('');
-  }
+3. **Activity** — Call \`kernal_add_activity\` once to log this interaction. Include the type (meeting/call/email/event/intro/other), title, date, summary, and the names of participants and organizations involved.
 
-  summary.push(`**${result.relationships} relationships** created or confirmed.`);
+4. **Actions** — For any follow-ups, promises, or tasks mentioned, call \`kernal_add_action\` with the action title, owner (if clear), and due date (if mentioned).
 
-  // Show entity counts
-  const counts = {
-    people: db.get<{ c: number }>('SELECT COUNT(*) as c FROM people')?.c || 0,
-    organizations: db.get<{ c: number }>('SELECT COUNT(*) as c FROM organizations')?.c || 0,
-    activities: db.get<{ c: number }>('SELECT COUNT(*) as c FROM activities')?.c || 0,
-  };
-  summary.push(`\n_Knowledge base: ${counts.people} people, ${counts.organizations} orgs, ${counts.activities} activities._`);
+5. **Relationships** — Call \`kernal_link\` to connect people to each other if the text reveals relationships (e.g., "reports to", "introduced me to", "knows").
 
-  summary.push('\n*Review the above. If anything looks wrong, use `kernal_correct` to fix it.*');
+### Existing People (check for duplicates)
+${existingPeople.length > 0
+    ? existingPeople.map(p => `- #${p.id} ${p.name}${p.role ? ` (${p.role})` : ''}${p.org_name ? ` @ ${p.org_name}` : ''}`).join('\n')
+    : '_(none yet)_'}
 
-  return textResult(summary.join('\n'));
+### Existing Organizations
+${existingOrgs.length > 0
+    ? existingOrgs.map(o => `- #${o.id} ${o.name}`).join('\n')
+    : '_(none yet)_'}`;
+
+  return textResult(instructions);
 }
