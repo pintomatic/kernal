@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+/* ========================================
+   ANDES DESIGN SYSTEM TOKENS
+   Shared across: andes-web, studio, kernal, kernal-full
+   ======================================== */
+
+:root {
+  /* --- Core Brand --- */
+  --andes-olive: 85 35% 40%;
+  --andes-olive-light: 85 30% 55%;
+  --andes-olive-dark: 85 40% 28%;
+
+  --andes-terracotta: 16 55% 50%;
+  --andes-terracotta-light: 14 71% 55%;
+  --andes-terracotta-dark: 16 55% 40%;
+
+  /* --- Neutral Palette (Stone) --- */
+  --andes-bg: 40 20% 98%;
+  --andes-bg-subtle: 40 15% 96%;
+  --andes-bg-muted: 37 13% 92%;
+  --andes-border: 37 15% 85%;
+  --andes-border-subtle: 37 10% 90%;
+
+  --andes-text: 30 10% 15%;
+  --andes-text-secondary: 30 8% 40%;
+  --andes-text-muted: 30 5% 55%;
+  --andes-text-inverse: 40 20% 98%;
+
+  /* --- Semantic Colors (Data/Dashboard) --- */
+  --andes-data-people: 220 70% 55%;
+  --andes-data-orgs: 270 50% 55%;
+  --andes-data-deals: 199 90% 50%;
+  --andes-data-goals: 265 55% 55%;
+  --andes-data-actions: 38 90% 55%;
+  --andes-data-patterns: 186 80% 45%;
+  --andes-data-plans: 170 55% 35%;
+  --andes-data-activities: 152 50% 45%;
+
+  /* --- Status Colors --- */
+  --andes-success: 152 55% 40%;
+  --andes-warning: 38 90% 50%;
+  --andes-error: 0 84% 60%;
+  --andes-info: 199 90% 50%;
+
+  /* --- Layout Tokens --- */
+  --andes-radius-sm: 0.375rem;
+  --andes-radius-md: 0.5rem;
+  --andes-radius-lg: 0.75rem;
+  --andes-radius-xl: 1rem;
+
+  /* --- Shadows --- */
+  --andes-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --andes-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --andes-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --andes-shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.1);
+
+  /* --- Typography --- */
+  --andes-font-body: 'Inter', system-ui, sans-serif;
+  --andes-font-headline: 'DM Sans', system-ui, sans-serif;
+  --andes-font-mono: 'JetBrains Mono', monospace;
+
+  /* --- Animation --- */
+  --andes-duration-fast: 150ms;
+  --andes-duration-normal: 300ms;
+  --andes-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Base page styling */
+body {
+  background-color: hsl(var(--andes-bg));
+  color: hsl(var(--andes-text));
+  font-family: var(--andes-font-body);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out both;
+}

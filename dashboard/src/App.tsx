@@ -38,22 +38,22 @@ export default function App() {
 
   if (needsKey) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm w-full">
-          <h1 className="text-xl font-semibold text-zinc-100 mb-1">Kernal</h1>
-          <p className="text-sm text-zinc-500 mb-6">Enter your API key to connect.</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[hsl(var(--andes-bg))]">
+        <div className="bg-white border border-[hsl(var(--andes-border))] rounded-2xl p-8 max-w-sm w-full shadow-[var(--andes-shadow-lg)]">
+          <h1 className="text-xl font-semibold text-[hsl(var(--andes-text))] mb-1">Kernal</h1>
+          <p className="text-sm text-[hsl(var(--andes-text-muted))] mb-6">Enter your API key to connect.</p>
           <form onSubmit={(e) => { e.preventDefault(); setNeedsKey(false); }}>
             <input
               type="password"
               value={apiKey}
               onChange={e => setKey(e.target.value)}
               placeholder="API key"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500 mb-4"
+              className="w-full bg-[hsl(var(--andes-bg-subtle))] border border-[hsl(var(--andes-border))] rounded-lg px-4 py-2.5 text-sm text-[hsl(var(--andes-text))] placeholder-[hsl(var(--andes-text-muted))] focus:outline-none focus:border-[hsl(var(--andes-olive))] mb-4 transition-colors"
               autoFocus
             />
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
+              className="w-full bg-[hsl(var(--andes-olive))] hover:bg-[hsl(var(--andes-olive-light))] text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
             >
               Connect
             </button>
@@ -64,22 +64,22 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[hsl(var(--andes-bg))]">
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-[hsl(var(--andes-border))] bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
-          <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">Kernal</h1>
+          <h1 className="text-lg font-semibold text-[hsl(var(--andes-text))] tracking-tight">Kernal</h1>
 
           {/* Nav */}
-          <nav className="flex gap-1">
+          <nav className="flex gap-1 overflow-x-auto max-w-[calc(100vw-16rem)] sm:max-w-none" style={{ scrollbarWidth: 'none' }}>
             {NAV_ITEMS.map(item => (
               <button
                 key={item.view}
                 onClick={() => { setView(item.view); setParams({}); }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap shrink-0 ${
                   view === item.view
-                    ? 'bg-zinc-800 text-zinc-100'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'
+                    ? 'bg-[hsl(var(--andes-olive)/0.1)] text-[hsl(var(--andes-olive-dark))] font-medium'
+                    : 'text-[hsl(var(--andes-text-muted))] hover:text-[hsl(var(--andes-text))] hover:bg-[hsl(var(--andes-bg-muted))]'
                 }`}
               >
                 <span className="mr-1.5">{item.icon}</span>
@@ -95,7 +95,7 @@ export default function App() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Ask Kernal anything..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              className="w-full bg-[hsl(var(--andes-bg-subtle))] border border-[hsl(var(--andes-border-subtle))] rounded-lg px-4 py-2 text-sm text-[hsl(var(--andes-text))] placeholder-[hsl(var(--andes-text-muted))] focus:outline-none focus:border-[hsl(var(--andes-olive))] transition-colors"
             />
           </form>
         </div>
@@ -103,14 +103,16 @@ export default function App() {
 
       {/* Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
-        {view === 'overview' && <Overview />}
-        {view === 'network' && <NetworkGraph />}
-        {view === 'timeline' && <Timeline entity={params.entity} />}
-        {view === 'actions' && <ActionItems />}
+        <div key={view} className="animate-fadeIn">
+          {view === 'overview' && <Overview />}
+          {view === 'network' && <NetworkGraph />}
+          {view === 'timeline' && <Timeline entity={params.entity} />}
+          {view === 'actions' && <ActionItems />}
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-800 py-3 text-center text-xs text-zinc-600">
+      <footer className="border-t border-[hsl(var(--andes-border))] py-3 text-center text-xs text-[hsl(var(--andes-text-muted))]">
         Kernal v0.1.0 — Your knowledge, your machine.
       </footer>
     </div>
