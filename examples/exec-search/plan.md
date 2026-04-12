@@ -1,7 +1,7 @@
 # Implementation Plan: Shortlist Rationale Generator
 
 ## Goal
-Build Target A from the BackerSkeie build brief — a shortlist rationale generator that takes an assignment and candidate list, queries the Kernal graph, and produces a client-facing rationale + internal audit trail.
+Build Target A from the exec search build brief — a shortlist rationale generator that takes an assignment and candidate list, queries the Kernal graph, and produces a client-facing rationale + internal audit trail.
 
 ## Architecture
 

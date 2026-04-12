@@ -1,6 +1,6 @@
 # Next Build Priorities: Exec Search on Kernal
 
-Ranked by impact on the BackerSkeie demo and production readiness.
+Ranked by impact on the exec search demo and production readiness.
 
 ## 1. Assignment Entity + Candidacy Table (High)
 
@@ -26,4 +26,4 @@ Close the loop: when a candidate is placed, record it as a structured event (not
 
 ## Sequencing
 
-Items 1 and 2 are prerequisites for the live BackerSkeie demo. Items 3-4 are needed before any multi-user deployment. Item 5 is a growth feature that improves over time as placements accumulate.
+Items 1 and 2 are prerequisites for the live exec search demo. Items 3-4 are needed before any multi-user deployment. Item 5 is a growth feature that improves over time as placements accumulate.

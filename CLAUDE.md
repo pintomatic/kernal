@@ -182,6 +182,6 @@ kernal_context    — deep briefing on a person or org (timeline, network, topic
 
 ## Relationship to Other Projects
 
-- **Cortex** = Kernal + Gartner workflows + deal methodology
+- **Cortex** = Kernal + professional services workflows + deal methodology
 - **Andes** = Kernal + team features + professional services
 - **Kernal** = the open-source core that powers both
