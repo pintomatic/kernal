@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useApi, getApiBase, getAuthHeaders } from './config';
+import { useApi, getApiBase, getAuthHeaders, patchAction } from './config';
+import type { ActionsData } from './config';
 import { EntityBadge, useEntityLinks, useEntityCacheUpdater, showSaveError } from './entity-badge';
 import type { EntityFocus } from './types';
 
@@ -14,7 +15,7 @@ interface Deal {
 }
 interface DealsApiData { entities: Deal[]; }
 interface ActionsApiData {
-  actions?: Array<{ id: number; title: string; entity_id?: number | null; status?: string; created_at?: string }>;
+  actions?: Array<{ id: number; title: string; entity_id?: number | null; deal_id?: number | null; status?: string; created_at?: string }>;
   grouped?: Record<string, any[]>;
 }
 
@@ -265,6 +266,7 @@ function DealCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [localTasks, setLocalTasks] = useState<any[] | null>(null);
+  const [tasksExpanded, setTasksExpanded] = useState(false);
   const updateCache = useEntityCacheUpdater();
 
   const dealRef = useRef(deal);
@@ -288,18 +290,23 @@ function DealCard({
   // Linked project chips (kind='delivers', deal → project)
   const deliverLinks = useEntityLinks(deal.id, 'from', 'delivers');
 
-  // Tasks for this deal
+  // Tasks for this deal — handle entity_id offset (deal_id + 20000 = entity_id)
   const rawDealTasks = useMemo(() =>
-    allTasks.filter(t => String(t.entity_id) === String(deal.id))
-      .sort((a, b) => {
-        if (a.status === 'done' && b.status !== 'done') return 1;
-        if (b.status === 'done' && a.status !== 'done') return -1;
-        return 0;
-      }).slice(0, 3),
+    allTasks.filter(t =>
+      t.status === 'open' && (
+        (t.deal_id != null && t.deal_id + 20000 === deal.id) ||
+        String(t.entity_id) === String(deal.id)
+      )
+    ).sort((a, b) => {
+      if (a.status === 'done' && b.status !== 'done') return 1;
+      if (b.status === 'done' && a.status !== 'done') return -1;
+      return 0;
+    }),
     [allTasks, deal.id]
   );
 
   const displayTasks = localTasks ?? rawDealTasks;
+  const visibleTasks = tasksExpanded ? displayTasks : displayTasks.slice(0, 5);
 
   const startTitleEdit = () => {
     setTitleDraft(dealRef.current.title);
@@ -365,15 +372,11 @@ function DealCard({
   }, [onDeleted]);
 
   const handleTaskDone = useCallback(async (taskId: number): Promise<void> => {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${getApiBase()}/api/actions/${taskId}`, {
-      method: 'PATCH',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done' }),
-    });
-    if (!res.ok) {
+    try {
+      await patchAction(taskId, { status: 'done' });
+    } catch {
       showSaveError("Couldn't mark task done — try again");
-      throw new Error(`HTTP ${res.status}`);
+      throw new Error('patchAction failed');
     }
   }, []);
 
@@ -486,9 +489,17 @@ function DealCard({
       {/* Inline tasks */}
       {displayTasks.length > 0 && (
         <div onClick={e => e.stopPropagation()} style={{ borderTop: '1px solid #f3f4f6', paddingTop: 6, marginBottom: 4 }}>
-          {displayTasks.map(t => (
+          {visibleTasks.map(t => (
             <InlineTask key={t.id} task={t} onDone={handleTaskDone} />
           ))}
+          {displayTasks.length > 5 && (
+            <button
+              onClick={e => { e.stopPropagation(); setTasksExpanded(x => !x); }}
+              style={{ fontSize: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', padding: '2px 0', marginTop: 2 }}
+            >
+              {tasksExpanded ? `▴ Show less` : `▾ Show all ${displayTasks.length} tasks`}
+            </button>
+          )}
         </div>
       )}
 
@@ -515,26 +526,31 @@ function DealCard({
 
 interface DealBoardProps {
   onEntityClick?: (entity: EntityFocus) => void;
+  actionsData?: ActionsData | null;
 }
 
-export default function DealBoard({ onEntityClick }: DealBoardProps) {
+export default function DealBoard({ onEntityClick, actionsData: actionsDataProp }: DealBoardProps) {
   const { data, loading, error } = useApi<DealsApiData>(
     '/api/entities?kind=deal&status=active,won,lost,on_hold'
   );
-  const { data: actionsData } = useApi<ActionsApiData>('/api/dashboard/actions');
+  const { data: internalActionsData } = useApi<ActionsApiData>(
+    actionsDataProp != null ? null : '/api/dashboard/actions?status=open'
+  );
 
   const [stageOverrides, setStageOverrides] = useState<Record<number, string>>({});
   const [localTitles, setLocalTitles] = useState<Record<number, string>>({});
   const [deletedIds, setDeletedIds] = useState<Set<number>>(() => new Set());
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
+  const resolvedActionsData = actionsDataProp ?? internalActionsData;
+
   const allTasks = useMemo(() => {
-    const a = actionsData?.actions;
+    const a = resolvedActionsData?.actions;
     if (a) return a;
-    const grouped = actionsData?.grouped;
+    const grouped = (resolvedActionsData as any)?.grouped;
     if (grouped) return (Object.values(grouped) as any[][]).flat();
     return [];
-  }, [actionsData]);
+  }, [resolvedActionsData]);
 
   const deals: Deal[] = useMemo(() => data?.entities ?? [], [data]);
 

@@ -1,24 +1,11 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback, useContext } from 'react';
-import { useApi, getApiBase, getAuthHeaders, type ActionsData } from './config';
+import { useApi, getApiBase, getAuthHeaders, patchAction } from './config';
 import { EntityBadge, useEntity, showSaveError, EntityCacheContext } from './entity-badge';
+import type { ActionsData, ActionItem } from './config';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-
-type ActionItem = {
-  id: number;
-  title: string;
-  due_date: string | null;
-  owner_name: string | null;
-  priority?: string;
-  list?: string;
-  entity_id?: number | null;
-  deal_id?: number | null;
-  goal_id?: number | null;
-  project_id?: number | null;
-  status?: string;
-};
 
 type KindFilter = 'all' | 'goal' | 'project' | 'deal' | 'unlinked';
 
@@ -28,19 +15,6 @@ const PRIORITY_STYLES: Record<string, { label: string; classes: string }> = {
   normal: { label: 'NORMAL', classes: 'bg-stone-100 text-stone-500 border border-stone-200' },
   low:    { label: 'LOW',    classes: 'bg-sky-50 text-sky-600 border border-sky-200' },
 };
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-async function patchAction(id: number, body: Record<string, unknown>) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${getApiBase()}/api/actions/${id}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
 
 // ── Reassign dropdown ──────────────────────────────────────────────────────
 
@@ -164,29 +138,82 @@ function ReassignDropdown({ actionId, onReassign, onClose }: {
 // ── ActionCard ─────────────────────────────────────────────────────────────
 
 function ActionCard({
-  item, accentLeftBorder, groupBorder, onEntityReassigned,
+  item, accentLeftBorder, groupBorder, onEntityReassigned, onTaskDone,
+  editingId, editValue, titleOverrides, onStartEdit, onEditChange, onSaveTitle, onEditKeyDown,
+  onDateClick,
 }: {
   item: ActionItem;
   accentLeftBorder: string;
   groupBorder: string;
   onEntityReassigned: (id: number, entityId: number | null) => void;
+  onTaskDone: (id: number, revert?: boolean) => void;
+  editingId: number | null;
+  editValue: string;
+  titleOverrides: Map<number, string>;
+  onStartEdit: (id: number, currentTitle: string) => void;
+  onEditChange: (val: string) => void;
+  onSaveTitle: (id: number, title: string) => void;
+  onEditKeyDown: (e: React.KeyboardEvent, id: number, title: string) => void;
+  onDateClick: (e: React.MouseEvent, item: ActionItem) => void;
 }) {
   const [reassignOpen, setReassignOpen] = useState(false);
   const entity = useEntity(item.entity_id ?? undefined);
   const priority = item.priority?.toLowerCase();
   const priorityStyle = priority ? PRIORITY_STYLES[priority] : null;
+  const isEditing = editingId === item.id;
+  const displayTitle = titleOverrides.get(item.id) ?? item.title;
+  const now = new Date().toISOString().slice(0, 10);
+  const isOverdue = item.due_date ? item.due_date.slice(0, 10) < now : false;
 
   return (
     <div className={`bg-white border ${groupBorder} rounded-xl px-4 py-3 hover:border-stone-300 hover:shadow-sm transition-all duration-150 ${accentLeftBorder}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="w-4 h-4 mt-0.5 rounded border border-stone-300 flex-shrink-0" />
+          <input
+            type="checkbox"
+            style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488', marginTop: 2 }}
+            onClick={e => e.stopPropagation()}
+            onChange={async () => {
+              onTaskDone(item.id);
+              try {
+                await patchAction(item.id, { status: 'done' });
+              } catch {
+                onTaskDone(item.id, true); // revert: remove from completedIds
+              }
+            }}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-medium text-stone-800">{item.title}</p>
+              {isEditing ? (
+                <input
+                  value={editValue}
+                  autoFocus
+                  style={{ flex: 1, fontSize: 13, border: '1px solid #d1d5db', borderRadius: 4, padding: '1px 6px', minWidth: 120 }}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => onEditChange(e.target.value)}
+                  onBlur={() => onSaveTitle(item.id, editValue)}
+                  onKeyDown={e => onEditKeyDown(e, item.id, editValue)}
+                />
+              ) : (
+                <span
+                  className="text-sm font-medium text-stone-800"
+                  style={{ cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  onClick={e => { e.stopPropagation(); onStartEdit(item.id, displayTitle); }}
+                >{displayTitle}</span>
+              )}
               {priorityStyle && (
                 <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded ${priorityStyle.classes}`} style={{ fontFamily: 'var(--kd-font-mono)', letterSpacing: '0.05em' }}>
                   {priorityStyle.label}
+                </span>
+              )}
+              {item.deal_title && (
+                <span style={{ fontSize: 10, fontWeight: 600, background: '#EEF2FF', color: '#4F46E5', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {item.deal_title}
+                </span>
+              )}
+              {!item.deal_title && item.goal_title && (
+                <span style={{ fontSize: 10, fontWeight: 600, background: '#F0FDF4', color: '#166534', borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {item.goal_title}
                 </span>
               )}
             </div>
@@ -219,9 +246,13 @@ function ActionCard({
             </div>
           </div>
         </div>
-        {item.due_date && (
-          <span className="text-[11px] text-stone-400 whitespace-nowrap flex-shrink-0 mt-0.5" style={{ fontFamily: 'var(--kd-font-mono)' }}>{item.due_date}</span>
-        )}
+        <span
+          className="whitespace-nowrap flex-shrink-0 mt-0.5"
+          style={{ fontSize: 11, color: isOverdue ? '#EF4444' : '#9CA3AF', cursor: 'pointer', fontFamily: 'var(--kd-font-mono, ui-monospace, monospace)' }}
+          onClick={e => onDateClick(e, item)}
+        >
+          {item.due_date?.slice(0, 10) ?? 'no date'}
+        </span>
       </div>
     </div>
   );
@@ -229,9 +260,18 @@ function ActionCard({
 
 // ── ActionGroup ────────────────────────────────────────────────────────────
 
-function ActionGroup({ title, items, accent, onEntityReassigned }: {
+function ActionGroup({ title, items, accent, onEntityReassigned, onTaskDone, editingId, editValue, titleOverrides, onStartEdit, onEditChange, onSaveTitle, onEditKeyDown, onDateClick }: {
   title: string; items: ActionItem[]; accent: string;
   onEntityReassigned: (id: number, entityId: number | null) => void;
+  onTaskDone: (id: number, revert?: boolean) => void;
+  editingId: number | null;
+  editValue: string;
+  titleOverrides: Map<number, string>;
+  onStartEdit: (id: number, currentTitle: string) => void;
+  onEditChange: (val: string) => void;
+  onSaveTitle: (id: number, title: string) => void;
+  onEditKeyDown: (e: React.KeyboardEvent, id: number, title: string) => void;
+  onDateClick: (e: React.MouseEvent, item: ActionItem) => void;
 }) {
   const accentColors: Record<string, { badge: string; border: string; dot: string; leftBorder: string }> = {
     red:   { badge: 'bg-red-50 text-red-600 border border-red-200', border: 'border-stone-200', dot: 'bg-red-500', leftBorder: 'border-l-4 border-l-red-500' },
@@ -250,7 +290,22 @@ function ActionGroup({ title, items, accent, onEntityReassigned }: {
       </div>
       <div className="space-y-2">
         {items.map(item => (
-          <ActionCard key={item.id} item={item} accentLeftBorder={colors.leftBorder} groupBorder={colors.border} onEntityReassigned={onEntityReassigned} />
+          <ActionCard
+            key={item.id}
+            item={item}
+            accentLeftBorder={colors.leftBorder}
+            groupBorder={colors.border}
+            onEntityReassigned={onEntityReassigned}
+            onTaskDone={onTaskDone}
+            editingId={editingId}
+            editValue={editValue}
+            titleOverrides={titleOverrides}
+            onStartEdit={onStartEdit}
+            onEditChange={onEditChange}
+            onSaveTitle={onSaveTitle}
+            onEditKeyDown={onEditKeyDown}
+            onDateClick={onDateClick}
+          />
         ))}
       </div>
     </div>
@@ -264,8 +319,12 @@ export default function ActionItems() {
   const [owner, setOwner] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [entityOverrides, setEntityOverrides] = useState<Record<number, number | null>>({});
+  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [titleOverrides, setTitleOverrides] = useState<Map<number, string>>(new Map());
 
-  const { data, loading, error } = useApi<ActionsData>('/api/dashboard/actions');
+  const { data, loading, error } = useApi<ActionsData>('/api/dashboard/actions?status=open');
   const { map: entityCacheMap } = useContext(EntityCacheContext);
 
   // Build entity lookup from shared cache (normalized string keys → coerce to number for action lookup)
@@ -278,25 +337,71 @@ export default function ActionItems() {
     return map;
   }, [entityCacheMap]);
 
+  const saveTitle = useCallback(async (id: number, title: string) => {
+    if (!title.trim()) { setEditingId(null); return; }
+    setTitleOverrides(prev => new Map([...prev, [id, title]]));
+    setEditingId(null);
+    try { await patchAction(id, { title }); } catch { /* revert on next fetch */ }
+  }, []);
+
   const rawActions: ActionItem[] = useMemo(() => {
     const a = (data as any)?.actions;
-    if (a) return a;
+    if (a) return (a as ActionItem[]).filter((item: ActionItem) => !completedIds.has(item.id));
     const grouped = (data as any)?.grouped;
-    if (grouped) return (Object.values(grouped) as ActionItem[][]).flat();
+    if (grouped) return (Object.values(grouped) as ActionItem[][]).flat().filter((item: ActionItem) => !completedIds.has(item.id));
     return [];
-  }, [data]);
+  }, [data, completedIds]);
 
-  // Apply entity_id overrides from reassignments
+  const [dateOverrides, setDateOverrides] = useState<Map<number, string | null>>(new Map());
+
+  // Apply entity_id and date overrides from reassignments/edits
   const allActions: ActionItem[] = useMemo(() =>
     rawActions.map(a => ({
       ...a,
       entity_id: a.id in entityOverrides ? entityOverrides[a.id] : a.entity_id,
+      due_date: dateOverrides.has(a.id) ? (dateOverrides.get(a.id) ?? null) : a.due_date,
     })),
-    [rawActions, entityOverrides]
+    [rawActions, entityOverrides, dateOverrides]
   );
 
   const handleEntityReassigned = useCallback((id: number, entityId: number | null) => {
     setEntityOverrides(prev => ({ ...prev, [id]: entityId }));
+  }, []);
+
+  const handleTaskDone = useCallback((id: number, revert = false) => {
+    if (revert) {
+      setCompletedIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    } else {
+      setCompletedIds(prev => new Set([...prev, id]));
+    }
+  }, []);
+
+  const handleStartEdit = useCallback((id: number, currentTitle: string) => {
+    setEditingId(id);
+    setEditValue(currentTitle);
+  }, []);
+
+  const handleEditChange = useCallback((val: string) => {
+    setEditValue(val);
+  }, []);
+
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent, id: number, title: string) => {
+    if (e.key === 'Enter') saveTitle(id, title);
+    if (e.key === 'Escape') setEditingId(null);
+  }, [saveTitle]);
+
+  const handleDateClick = useCallback(async (e: React.MouseEvent, item: ActionItem) => {
+    e.stopPropagation();
+    const current = item.due_date?.slice(0, 10) ?? '';
+    const newDate = window.prompt('Due date (YYYY-MM-DD, blank to clear):', current);
+    if (newDate === null) return;
+    const d = newDate.trim();
+    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) { alert('Invalid format. Use YYYY-MM-DD.'); return; }
+    const val = d || null;
+    setDateOverrides(prev => new Map([...prev, [item.id, val]])); // optimistic display update
+    try { await patchAction(item.id, { due_date: val }); } catch {
+      setDateOverrides(prev => { const m = new Map(prev); m.delete(item.id); return m; }); // revert
+    }
   }, []);
 
   const owners = useMemo(() => {
@@ -334,15 +439,16 @@ export default function ActionItems() {
   const now = new Date().toISOString().slice(0, 10);
   const weekFromNow = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
-  const grouped = {
-    overdue:   filtered.filter(a => a.due_date && a.due_date.slice(0, 10) < now),
-    this_week: filtered.filter(a => a.due_date && a.due_date.slice(0, 10) >= now && a.due_date.slice(0, 10) <= weekFromNow),
-    upcoming:  filtered.filter(a => a.due_date && a.due_date.slice(0, 10) > weekFromNow),
-    no_date:   filtered.filter(a => !a.due_date),
-  };
-
-  // Unlinked bucket — use filtered so priority/owner filters apply here too
+  // In 'all' mode, exclude unlinked items from date buckets — they appear in the dedicated Unlinked section
   const unlinkedItems = filtered.filter(a => !a.deal_id && !a.goal_id && !a.project_id && !a.entity_id);
+  const linkedForDateBuckets = kindFilter === 'all' ? filtered.filter(a => a.deal_id || a.goal_id || a.project_id || a.entity_id) : filtered;
+
+  const grouped = {
+    overdue:   linkedForDateBuckets.filter(a => a.due_date && a.due_date.slice(0, 10) < now),
+    this_week: linkedForDateBuckets.filter(a => a.due_date && a.due_date.slice(0, 10) >= now && a.due_date.slice(0, 10) <= weekFromNow),
+    upcoming:  linkedForDateBuckets.filter(a => a.due_date && a.due_date.slice(0, 10) > weekFromNow),
+    no_date:   linkedForDateBuckets.filter(a => !a.due_date),
+  };
   const hasFilters = priority || owner || kindFilter !== 'all';
 
   const kindPills: { key: KindFilter; label: string; color: string }[] = [
@@ -420,10 +526,10 @@ export default function ActionItems() {
 
       {!loading && !error && (
         <>
-          {grouped.overdue.length > 0   && <ActionGroup title="Overdue"       items={grouped.overdue}   accent="red"   onEntityReassigned={handleEntityReassigned} />}
-          {grouped.this_week.length > 0 && <ActionGroup title="Due This Week" items={grouped.this_week} accent="amber" onEntityReassigned={handleEntityReassigned} />}
-          {grouped.upcoming.length > 0  && <ActionGroup title="Upcoming"      items={grouped.upcoming}  accent="blue"  onEntityReassigned={handleEntityReassigned} />}
-          {grouped.no_date.length > 0   && <ActionGroup title="No Due Date"   items={grouped.no_date}   accent="zinc"  onEntityReassigned={handleEntityReassigned} />}
+          {grouped.overdue.length > 0   && <ActionGroup title="Overdue"       items={grouped.overdue}   accent="red"   onEntityReassigned={handleEntityReassigned} onTaskDone={handleTaskDone} editingId={editingId} editValue={editValue} titleOverrides={titleOverrides} onStartEdit={handleStartEdit} onEditChange={handleEditChange} onSaveTitle={saveTitle} onEditKeyDown={handleEditKeyDown} onDateClick={handleDateClick} />}
+          {grouped.this_week.length > 0 && <ActionGroup title="Due This Week" items={grouped.this_week} accent="amber" onEntityReassigned={handleEntityReassigned} onTaskDone={handleTaskDone} editingId={editingId} editValue={editValue} titleOverrides={titleOverrides} onStartEdit={handleStartEdit} onEditChange={handleEditChange} onSaveTitle={saveTitle} onEditKeyDown={handleEditKeyDown} onDateClick={handleDateClick} />}
+          {grouped.upcoming.length > 0  && <ActionGroup title="Upcoming"      items={grouped.upcoming}  accent="blue"  onEntityReassigned={handleEntityReassigned} onTaskDone={handleTaskDone} editingId={editingId} editValue={editValue} titleOverrides={titleOverrides} onStartEdit={handleStartEdit} onEditChange={handleEditChange} onSaveTitle={saveTitle} onEditKeyDown={handleEditKeyDown} onDateClick={handleDateClick} />}
+          {grouped.no_date.length > 0   && <ActionGroup title="No Due Date"   items={grouped.no_date}   accent="zinc"  onEntityReassigned={handleEntityReassigned} onTaskDone={handleTaskDone} editingId={editingId} editValue={editValue} titleOverrides={titleOverrides} onStartEdit={handleStartEdit} onEditChange={handleEditChange} onSaveTitle={saveTitle} onEditKeyDown={handleEditKeyDown} onDateClick={handleDateClick} />}
 
           {/* Unlinked bucket — shown at bottom when kindFilter !== 'unlinked' */}
           {kindFilter === 'all' && unlinkedItems.length > 0 && (
@@ -435,7 +541,22 @@ export default function ActionItems() {
               </div>
               <div className="space-y-2">
                 {unlinkedItems.map(item => (
-                  <ActionCard key={item.id} item={item} accentLeftBorder="" groupBorder="border-stone-200" onEntityReassigned={handleEntityReassigned} />
+                  <ActionCard
+                    key={item.id}
+                    item={item}
+                    accentLeftBorder=""
+                    groupBorder="border-stone-200"
+                    onEntityReassigned={handleEntityReassigned}
+                    onTaskDone={handleTaskDone}
+                    editingId={editingId}
+                    editValue={editValue}
+                    titleOverrides={titleOverrides}
+                    onStartEdit={handleStartEdit}
+                    onEditChange={handleEditChange}
+                    onSaveTitle={saveTitle}
+                    onEditKeyDown={handleEditKeyDown}
+                    onDateClick={handleDateClick}
+                  />
                 ))}
               </div>
             </div>

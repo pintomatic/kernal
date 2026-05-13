@@ -30,6 +30,7 @@ export function getApiKey(): string {
 export async function fetchKernal<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${getApiBase()}${path}`, {
+    credentials: 'include',
     ...options,
     headers: { ...headers, 'Content-Type': 'application/json', ...options?.headers },
   });
@@ -51,7 +52,7 @@ export function useApi<T>(path: string | null) {
     setLoading(true);
     setError(null);
     getAuthHeaders()
-      .then(headers => fetch(`${getApiBase()}${path}`, { headers, signal: controller.signal }))
+      .then(headers => fetch(`${getApiBase()}${path}`, { credentials: 'include', headers, signal: controller.signal }))
       .then(res => { if (!res.ok) throw new Error(`API error: ${res.status}`); return res.json(); })
       .then(d => { if (!controller.signal.aborted) setData(d); })
       .catch(e => { if (e.name !== 'AbortError') setError(e.message); })
@@ -68,6 +69,7 @@ export async function patchAction(id: number, body: Record<string, unknown>): Pr
   const headers = await getAuthHeaders();
   const res = await fetch(`${getApiBase()}/api/actions/${id}`, {
     method: 'PATCH',
+    credentials: 'include',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
