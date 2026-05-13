@@ -1,5 +1,6 @@
 {
   "name": "@kernal/mcp",
+  "workspaces": ["packages/*", "dashboard"],
   "version": "0.1.0",
   "description": "Open-source knowledge graph for professionals — auto-extracts entities and relationships from natural conversation via MCP",
   "type": "module",
