@@ -157,6 +157,7 @@ function ActionCard({
   onDateClick: (e: React.MouseEvent, item: ActionItem) => void;
 }) {
   const [reassignOpen, setReassignOpen] = useState(false);
+  const pendingRef = useRef(false); // I3: prevent double-click race
   const entity = useEntity(item.entity_id ?? undefined);
   const priority = item.priority?.toLowerCase();
   const priorityStyle = priority ? PRIORITY_STYLES[priority] : null;
@@ -174,11 +175,15 @@ function ActionCard({
             style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0, accentColor: '#0d9488', marginTop: 2 }}
             onClick={e => e.stopPropagation()}
             onChange={async () => {
+              if (pendingRef.current) return;
+              pendingRef.current = true;
               onTaskDone(item.id);
               try {
                 await patchAction(item.id, { status: 'done' });
               } catch {
                 onTaskDone(item.id, true); // revert: remove from completedIds
+              } finally {
+                pendingRef.current = false;
               }
             }}
           />
@@ -375,6 +380,40 @@ export default function ActionItems() {
       setCompletedIds(prev => new Set([...prev, id]));
     }
   }, []);
+
+  // C3: reconcile completedIds — un-hide items the server still returns as open (PATCH may have failed)
+  useEffect(() => {
+    if (!data || completedIds.size === 0) return;
+    const all = (data as any)?.actions ?? Object.values((data as any)?.grouped ?? {}).flat();
+    const serverIds = new Set((all as ActionItem[]).map(a => a.id));
+    setCompletedIds(prev => {
+      const pruned = new Set([...prev].filter(id => !serverIds.has(id)));
+      return pruned.size !== prev.size ? pruned : prev;
+    });
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // I1: prune overrides when server data converges with the override value
+  useEffect(() => {
+    if (!data) return;
+    const all = (data as any)?.actions ?? Object.values((data as any)?.grouped ?? {}).flat() as ActionItem[];
+    setTitleOverrides(prev => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const a of all as ActionItem[]) {
+        if (next.has(a.id) && next.get(a.id) === a.title) { next.delete(a.id); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+    setDateOverrides(prev => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const a of all as ActionItem[]) {
+        const serverDate = (a.due_date ?? '').slice(0, 10) || null;
+        if (next.has(a.id) && next.get(a.id) === serverDate) { next.delete(a.id); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStartEdit = useCallback((id: number, currentTitle: string) => {
     setEditingId(id);

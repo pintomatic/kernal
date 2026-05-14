@@ -290,20 +290,23 @@ function DealCard({
   // Linked project chips (kind='delivers', deal → project)
   const deliverLinks = useEntityLinks(deal.id, 'from', 'delivers');
 
-  // Tasks for this deal — handle entity_id offset (deal_id + 20000 = entity_id)
+  // Tasks for this deal — match by deal_id (raw deal table ID) or legacy entity_id
   const rawDealTasks = useMemo(() =>
     allTasks.filter(t =>
       t.status === 'open' && (
-        (t.deal_id != null && t.deal_id + 20000 === deal.id) ||
-        String(t.entity_id) === String(deal.id)
+        String(t.entity_id) === String(deal.id) ||
+        (t.deal_id != null && t.deal_id === deal.id)
       )
-    ).sort((a, b) => {
-      if (a.status === 'done' && b.status !== 'done') return 1;
-      if (b.status === 'done' && a.status !== 'done') return -1;
-      return 0;
-    }),
+    ),
     [allTasks, deal.id]
   );
+
+  // I4: clear localTasks once server catches up — prevents duplicate rows after add
+  useEffect(() => {
+    if (!localTasks) return;
+    const serverIds = new Set(rawDealTasks.map(t => t.id));
+    if (localTasks.every(t => serverIds.has(t.id) || t.status === 'done')) setLocalTasks(null);
+  }, [rawDealTasks, localTasks]);
 
   const displayTasks = localTasks ?? rawDealTasks;
   const visibleTasks = tasksExpanded ? displayTasks : displayTasks.slice(0, 5);
@@ -527,13 +530,14 @@ function DealCard({
 interface DealBoardProps {
   onEntityClick?: (entity: EntityFocus) => void;
   actionsData?: ActionsData | null;
+  actionsError?: string | null;
 }
 
-export default function DealBoard({ onEntityClick, actionsData: actionsDataProp }: DealBoardProps) {
+export default function DealBoard({ onEntityClick, actionsData: actionsDataProp, actionsError }: DealBoardProps) {
   const { data, loading, error } = useApi<DealsApiData>(
     '/api/entities?kind=deal&status=active,won,lost,on_hold'
   );
-  const { data: internalActionsData } = useApi<ActionsApiData>(
+  const { data: internalActionsData, error: internalActionsError } = useApi<ActionsApiData>(
     actionsDataProp != null ? null : '/api/dashboard/actions?status=open'
   );
 
@@ -543,6 +547,7 @@ export default function DealBoard({ onEntityClick, actionsData: actionsDataProp 
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   const resolvedActionsData = actionsDataProp ?? internalActionsData;
+  const effectiveActionsError = actionsError ?? internalActionsError ?? null;
 
   const allTasks = useMemo(() => {
     const a = resolvedActionsData?.actions;
@@ -611,6 +616,12 @@ export default function DealBoard({ onEntityClick, actionsData: actionsDataProp 
 
   return (
     <div style={{ fontFamily: 'var(--font-headline, DM Sans)' }}>
+      {/* C4: task fetch error warning */}
+      {effectiveActionsError && !resolvedActionsData && (
+        <div style={{ fontSize: 11, color: '#b45309', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 6, padding: '4px 10px', marginBottom: 10 }}>
+          Tasks unavailable — could not reach actions endpoint.
+        </div>
+      )}
       {/* Stats */}
       <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#6b7280', marginBottom: 16, flexWrap: 'wrap' }}>
         <span>{dealsWithStage.length} deals</span>
