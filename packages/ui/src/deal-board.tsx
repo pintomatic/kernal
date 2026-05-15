@@ -291,11 +291,12 @@ function DealCard({
   const deliverLinks = useEntityLinks(deal.id, 'from', 'delivers');
 
   // Tasks for this deal — match by deal_id (raw deal table ID) or legacy entity_id
+  // Support both raw ID match (gartner) and +20000 entity offset (blekkie)
   const rawDealTasks = useMemo(() =>
     allTasks.filter(t =>
       t.status === 'open' && (
         String(t.entity_id) === String(deal.id) ||
-        (t.deal_id != null && t.deal_id === deal.id)
+        (t.deal_id != null && (t.deal_id === deal.id || t.deal_id + 20000 === deal.id))
       )
     ),
     [allTasks, deal.id]
