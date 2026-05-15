@@ -337,7 +337,7 @@ export default function GoalBoard({ onEntityClick }: GoalBoardProps) {
   const { data, loading, error } = useApi<GoalsApiData>(
     '/api/entities?kind=goal&status=active,paused,achieved,abandoned'
   );
-  const { data: actionsData } = useApi<ActionsApiData>('/api/dashboard/actions');
+  const { data: actionsData } = useApi<ActionsApiData>('/api/dashboard/actions?status=open');
 
   const [localTitles, setLocalTitles] = useState<Record<number, string>>({});
   const [localStatuses, setLocalStatuses] = useState<Record<number, string>>({});
@@ -357,7 +357,12 @@ export default function GoalBoard({ onEntityClick }: GoalBoardProps) {
   const taskCountByGoal = useMemo(() => {
     const map = new Map<number, number>();
     for (const t of allTasks) {
-      if (t.entity_id) map.set(t.entity_id, (map.get(t.entity_id) ?? 0) + 1);
+      // goal_id is the raw goal table ID (modern); entity_id is legacy fallback
+      if (t.goal_id != null) {
+        map.set(t.goal_id, (map.get(t.goal_id) ?? 0) + 1);
+      } else if (t.entity_id) {
+        map.set(t.entity_id, (map.get(t.entity_id) ?? 0) + 1);
+      }
     }
     return map;
   }, [allTasks]);
