@@ -36,7 +36,7 @@ The open-source core is the engine. Andes wraps it with infrastructure, UX, and 
 ## Quick Start
 
 ```bash
-npx @kernal/mcp init
+npx kernal-mcp init
 ```
 
 This creates a SQLite database at `~/.kernal/kernal.db` and prints the config to add to Claude Desktop.
@@ -48,7 +48,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "kernal": {
       "command": "npx",
-      "args": ["-y", "@kernal/mcp", "serve"]
+      "args": ["-y", "kernal-mcp", "serve"]
     }
   }
 }

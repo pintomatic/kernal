@@ -1,7 +1,7 @@
 {
-  "name": "@kernal/mcp",
+  "name": "kernal-mcp",
   "workspaces": ["packages/*", "dashboard"],
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Open-source knowledge graph for professionals — auto-extracts entities and relationships from natural conversation via MCP",
   "type": "module",
   "main": "dist/src/index.js",
@@ -45,6 +45,7 @@
     "dist/",
     "src/db/schema.sql",
     "bin/",
+    "hook-templates/",
     "LICENSE",
     "README.md"
   ],
