@@ -1,30 +1,36 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'fs';
+import { existsSync, copyFileSync } from 'fs';
 import { join } from 'path';
 import { ensureKernalDir, getConfig, saveConfig, getDbPath, getKernalDir } from '../src/utils/config.js';
 import { createLocalDb, initSchema } from '../src/db/local.js';
+import { hooks } from '../src/cli/hooks.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
 
-switch (command) {
-  case 'init':
-    init();
-    break;
-  case 'serve':
-    serve();
-    break;
-  case 'export':
-    exportDb();
-    break;
-  case 'status':
-    status();
-    break;
-  default:
-    help();
-    break;
-}
+(async () => {
+  switch (command) {
+    case 'init':
+      init();
+      break;
+    case 'serve':
+      await serve();
+      break;
+    case 'export':
+      exportDb();
+      break;
+    case 'status':
+      status();
+      break;
+    case 'hooks':
+      await hooks(args.slice(1));
+      break;
+    default:
+      help();
+      break;
+  }
+})();
 
 function init() {
   ensureKernalDir();
@@ -81,7 +87,6 @@ function exportDb() {
   }
 
   const exportPath = args[1] || join(process.cwd(), 'kernal-export.db');
-  const { copyFileSync } = require('fs');
   copyFileSync(dbPath, exportPath);
   console.log(`Database exported to: ${exportPath}`);
 }
@@ -122,9 +127,15 @@ Usage:
   kernal serve     Start MCP server (stdio transport)
   kernal status    Show database stats
   kernal export    Export database to a file
+  kernal hooks     Install Kernal context hooks for Claude Code (and other AI clients)
   kernal help      Show this help message
 
 Environment:
   KERNAL_DB_PATH   Override database path (default: ~/.kernal/kernal.db)
+
+Examples:
+  kernal hooks --client claude-code --env mycompany
+  kernal hooks --client claude-code --env mycompany --api-url https://kernal.andes.no
+  kernal hooks --help
 `);
 }

@@ -1,7 +1,8 @@
 {
   "name": "kernal-mcp",
+  "mcpName": "io.github.pintomatic/kernal-mcp",
   "workspaces": ["packages/*", "dashboard"],
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Open-source knowledge graph for professionals — auto-extracts entities and relationships from natural conversation via MCP",
   "type": "module",
   "main": "dist/src/index.js",

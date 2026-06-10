@@ -164,13 +164,17 @@ function EntityTile({ entity, tasks, onTaskDone, onTaskAdd }: {
 }) {
   const [addingTask, setAddingTask] = useState(false);
   const isProject = entity.kind === 'project';
-  const accentColor = isProject ? '#D97706' : '#6366F1';
-  const badgeBg = isProject ? '#FEF3C7' : '#EDE9FE';
+  /* Aurora violet retired 2026-05-30 in Mosaic.2 M8 — see mosaic.css.
+   * Deal accent was indigo `#6366F1` with violet-tinted `#EDE9FE` chip —
+   * both collapse to teal-2 / teal-soft, the canonical brand accent. The
+   * ALIGN stage hue was `#8b5cf6` — retired to teal-ink. */
+  const accentColor = isProject ? '#D97706' : '#0d9488';
+  const badgeBg = isProject ? '#FEF3C7' : '#ccfbf1';
   const kindLabel = isProject ? 'PROJECT' : 'DEAL';
   const statusLabel = isProject ? (entity.status ?? '').toUpperCase() : (entity.stage ?? '').toUpperCase();
 
   const stageColors: Record<string, string> = {
-    DISCOVER: '#3b82f6', QUALIFY: '#f59e0b', ALIGN: '#8b5cf6',
+    DISCOVER: '#3b82f6', QUALIFY: '#f59e0b', ALIGN: '#0f766e',
     COMMIT: '#16a34a', PROSPECT: '#9ca3af',
   };
   const statusColor = isProject

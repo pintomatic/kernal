@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
+import { configureKernalUI } from '@kernal/ui';
+// CSS variables provided by @source directive in index.css (Tailwind v4)
 import { routeIntent, type View } from './lib/intentRouter';
 import { getApiKey, setApiKey } from './hooks/useKernalApi';
+
+// Configure @kernal/ui to use same-origin relative URLs with x-api-key auth
+configureKernalUI({
+  apiBase: '',
+  getAuthHeaders: async () => {
+    const key = typeof localStorage !== 'undefined' ? localStorage.getItem('kernal-api-key') || '' : '';
+    return key ? { 'x-api-key': key } : {};
+  },
+});
 import Overview from './components/Overview';
 import NetworkGraph from './components/NetworkGraph';
 import Timeline from './components/Timeline';

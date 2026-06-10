@@ -19,11 +19,14 @@ interface ActionsApiData {
   grouped?: Record<string, any[]>;
 }
 
+/* Aurora violet retired 2026-05-30 in Mosaic.2 M8 — see mosaic.css.
+ * `align` was violet — now resolves to teal-ink (the canonical brand
+ * accent), preserving stage progression without the rainbow. */
 const STAGES = [
   { key: 'prospect', label: 'Prospect', color: '#a8a29e' },
   { key: 'discover', label: 'Discover', color: '#3b82f6' },
   { key: 'qualify',  label: 'Qualify',  color: '#f59e0b' },
-  { key: 'align',    label: 'Align',    color: '#8b5cf6' },
+  { key: 'align',    label: 'Align',    color: '#0f766e' },
   { key: 'commit',   label: 'Commit',   color: '#16a34a' },
 ] as const;
 

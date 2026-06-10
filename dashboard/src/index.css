@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../node_modules/@kernal/ui/dist";
 
 /* ========================================
    ANDES DESIGN SYSTEM TOKENS

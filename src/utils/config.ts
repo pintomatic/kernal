@@ -4,6 +4,7 @@ import { homedir } from 'os';
 
 export interface KernalConfig {
   dbPath: string;
+  apiKey?: string;
 }
 
 const KERNAL_DIR = join(homedir(), '.kernal');

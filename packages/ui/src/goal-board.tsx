@@ -249,7 +249,8 @@ function GoalCard({
             <span style={{ fontSize: 9, color: '#8e8e93', background: '#f3f4f6', borderRadius: 10, padding: '1px 5px' }}>{goal.domain}</span>
           )}
           {taskCount > 0 && (
-            <span style={{ fontSize: 9, fontWeight: 600, color: '#6366f1', background: '#ede9fe', borderRadius: 10, padding: '1px 6px' }}>{taskCount} tasks</span>
+            /* Aurora violet retired 2026-05-30 in Mosaic.2 M8 — see mosaic.css. */
+            <span style={{ fontSize: 9, fontWeight: 600, color: '#0f766e', background: '#ccfbf1', borderRadius: 10, padding: '1px 6px' }}>{taskCount} tasks</span>
           )}
           {typeof goal.confidence === 'number' && (
             <span style={{ fontSize: 10, color: '#8e8e93' }}>{goal.confidence}%</span>
@@ -328,8 +329,11 @@ interface GoalBoardProps {
   onEntityClick?: (entity: EntityFocus) => void;
 }
 
+/* Aurora violet retired 2026-05-30 in Mosaic.2 M8 — see mosaic.css.
+ * `personal` was the violet domain — now resolves to teal-2, matching the
+ * canonical single-accent rule. */
 const DOMAIN_COLORS: Record<string, string> = {
-  career: '#3b82f6', health: '#10b981', personal: '#8b5cf6',
+  career: '#3b82f6', health: '#10b981', personal: '#0d9488',
   finance: '#f59e0b', learning: '#06b6d4',
 };
 

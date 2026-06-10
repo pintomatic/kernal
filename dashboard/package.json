@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kernal/ui": "file:../packages/ui",
     "@tailwindcss/postcss": "^4.2.2",
+    "lucide-react": "^0.400.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-force-graph-2d": "^1.26.6"

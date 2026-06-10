@@ -199,10 +199,13 @@ export function showSaveError(msg = "Couldn't save — try again"): void {
 
 // ── Kind colors ────────────────────────────────────────────────────────────
 
+/* Aurora violet retired 2026-05-30 in Mosaic.2 M8 — see mosaic.css.
+ * Deal accent was indigo `#6366F1` with violet-tinted `#EDE9FE` chip — both
+ * collapse to the canonical teal accent + teal-soft chip. */
 const KIND_COLORS: Record<string, { accent: string; bg: string; label: string }> = {
   goal:    { accent: '#16A34A', bg: '#f0fdf4', label: 'GOAL' },
   project: { accent: '#D97706', bg: '#FEF3C7', label: 'PROJECT' },
-  deal:    { accent: '#6366F1', bg: '#EDE9FE', label: 'DEAL' },
+  deal:    { accent: '#0d9488', bg: '#ccfbf1', label: 'DEAL' },
   task:    { accent: '#9CA3AF', bg: '#F3F4F6', label: 'TASK' },
 };
 

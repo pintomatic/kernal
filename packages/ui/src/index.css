@@ -1,0 +1,10 @@
+:root {
+  --kd-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  --kd-font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --kd-radius: 10px;
+  --kd-shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --kd-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --kd-teal: #0d9488;
+  --kd-navy: #1e3a5f;
+  --kd-stone: #78716c;
+}
